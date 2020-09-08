@@ -1,8 +1,10 @@
+//#define FUTURE_SUPPLY 9000000;
+
 #include <hagglextoken/hagglextoken.hpp>
 
-namespace eosio {
+using namespace eosio;
 
-void token::create( const name&   issuer,
+void hagglextoken::create( const name&   issuer,
                     const asset&  maximum_supply )
 {
     require_auth( get_self() );
@@ -16,15 +18,18 @@ void token::create( const name&   issuer,
     auto existing = statstable.find( sym.code().raw() );
     check( existing == statstable.end(), "token with symbol already exists" );
 
-    statstable.emplace( get_self(), [&]( auto& s ) {
+     statstable.emplace( get_self(), [&]( auto& s ) {
        s.supply.symbol = maximum_supply.symbol;
        s.max_supply    = maximum_supply;
        s.issuer        = issuer;
+       s.starttime     = current_time_point().sec_since_epoch();
+       s.minetime      = 0;
     });
+
 }
 
 
-void token::issue( const name& to, const asset& quantity, const string& memo )
+void hagglextoken::issue( const name& to, const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -45,12 +50,14 @@ void token::issue( const name& to, const asset& quantity, const string& memo )
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply += quantity;
+       s.minetime = current_time_point().sec_since_epoch();
     });
 
     add_balance( st.issuer, quantity, st.issuer );
+
 }
 
-void token::retire( const asset& quantity, const string& memo )
+void hagglextoken::retire( const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -67,18 +74,25 @@ void token::retire( const asset& quantity, const string& memo )
 
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
 
-    statstable.modify( st, same_payer, [&]( auto& s ) {
+   /* statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply -= quantity;
-    });
+    }); */
 
     sub_balance( st.issuer, quantity );
 }
 
-void token::transfer( const name&    from,
+void hagglextoken::transfer( const name&    from,
                       const name&    to,
                       const asset&   quantity,
                       const string&  memo )
 {
+
+    blacklists blacklistt(get_self(), get_self().value);
+    auto fromexisting = blacklistt.find( from.value );
+    check( fromexisting == blacklistt.end(), "account blacklisted(from)" );
+    auto toexisting = blacklistt.find( to.value );
+    check( toexisting == blacklistt.end(), "account blacklisted(to)" );
+
     check( from != to, "cannot transfer to self" );
     require_auth( from );
     check( is_account( to ), "to account does not exist");
@@ -100,7 +114,7 @@ void token::transfer( const name&    from,
     add_balance( to, quantity, payer );
 }
 
-void token::sub_balance( const name& owner, const asset& value ) {
+void hagglextoken::sub_balance( const name& owner, const asset& value ) {
    accounts from_acnts( get_self(), owner.value );
 
    const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
@@ -111,7 +125,7 @@ void token::sub_balance( const name& owner, const asset& value ) {
       });
 }
 
-void token::add_balance( const name& owner, const asset& value, const name& ram_payer )
+void hagglextoken::add_balance( const name& owner, const asset& value, const name& ram_payer )
 {
    accounts to_acnts( get_self(), owner.value );
    auto to = to_acnts.find( value.symbol.code().raw() );
@@ -126,14 +140,14 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
    }
 }
 
-void token::open( const name& owner, const symbol& symbol, const name& ram_payer )
+void hagglextoken::open( const name& owner, const symbol& symbol, const name& ram_payer )
 {
    require_auth( ram_payer );
 
    check( is_account( owner ), "owner account does not exist" );
 
    auto sym_code_raw = symbol.code().raw();
-   print sym_code_raw;
+   print (sym_code_raw);
    stats statstable( get_self(), sym_code_raw );
    const auto& st = statstable.get( sym_code_raw, "symbol does not exist" );
    check( st.supply.symbol == symbol, "symbol precision mismatch" );
@@ -148,7 +162,7 @@ void token::open( const name& owner, const symbol& symbol, const name& ram_payer
 }
 
 
-void token::close( const name& owner, const symbol& symbol )
+void hagglextoken::close( const name& owner, const symbol& symbol )
 {
    require_auth( owner );
    accounts acnts( get_self(), owner.value );
@@ -158,4 +172,66 @@ void token::close( const name& owner, const symbol& symbol )
    acnts.erase( it );
 }
 
-} /// namespace eosio
+
+
+
+void hagglextoken::blacklist( name account, string memo ) {
+    require_auth( get_self() );
+    check( memo.size() <= 256, "memo has more than 256 bytes" );
+    
+    blacklists blacklistt( get_self(), get_self().value);
+    auto existing = blacklistt.find( account.value );
+    check( existing == blacklistt.end(), "blacklist account already exists" );
+
+    blacklistt.emplace( get_self(), [&]( auto& b ) {
+       b.account = account;
+    });
+}
+
+
+void hagglextoken::unblacklist( name account) {
+    require_auth( get_self() );
+
+    blacklists blacklistt( get_self(), get_self().value);
+    auto existing = blacklistt.find( account.value );
+    check( existing != blacklistt.end(), "blacklist account not exists" );
+
+    blacklistt.erase(existing);
+}
+
+
+
+
+
+void hagglextoken::mint(const symbol_code& sym){ 
+   
+   stats statstable( get_self(), sym.raw() );
+   const auto& st = statstable.get( sym.raw() );
+   
+   require_auth(st.issuer);
+
+   const uint32_t one_day = 86400;
+   const uint32_t ninety_days = 90 * one_day;
+
+   if( st.supply.amount/10000 <= 9000000 ){
+
+      asset reward = get_reward(st.supply, sym);
+      uint32_t currenttime = current_time_point().sec_since_epoch();
+
+      if( currenttime > (st.starttime + 600) ){
+
+         if( currenttime > (st.minetime + 600) ){
+
+            action{
+                  permission_level{get_self(), "active"_n}, 
+                  get_self(),
+                  "issue"_n,
+                  std::make_tuple(get_self(), reward * 10000, std::string("Issue tokens"))
+               }.send(); 
+            }
+         } 
+      }//if
+   }
+
+
+EOSIO_DISPATCH( hagglextoken, (create)(issue)(transfer)(retire)(open)(mint)(close)(blacklist)(unblacklist))
