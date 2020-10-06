@@ -38,6 +38,20 @@
             ]
         },
         {
+            "name": "burn",
+            "base": "",
+            "fields": [
+                {
+                    "name": "quantity",
+                    "type": "asset"
+                },
+                {
+                    "name": "memo",
+                    "type": "string"
+                }
+            ]
+        },
+        {
             "name": "close",
             "base": "",
             "fields": [
@@ -50,6 +64,11 @@
                     "type": "symbol"
                 }
             ]
+        },
+        {
+            "name": "clrblacklist",
+            "base": "",
+            "fields": []
         },
         {
             "name": "create",
@@ -138,20 +157,6 @@
             ]
         },
         {
-            "name": "retire",
-            "base": "",
-            "fields": [
-                {
-                    "name": "quantity",
-                    "type": "asset"
-                },
-                {
-                    "name": "memo",
-                    "type": "string"
-                }
-            ]
-        },
-        {
             "name": "transfer",
             "base": "",
             "fields": [
@@ -191,8 +196,18 @@
             "ricardian_contract": ""
         },
         {
+            "name": "burn",
+            "type": "burn",
+            "ricardian_contract": ""
+        },
+        {
             "name": "close",
             "type": "close",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "clrblacklist",
+            "type": "clrblacklist",
             "ricardian_contract": ""
         },
         {
@@ -216,11 +231,6 @@
             "ricardian_contract": ""
         },
         {
-            "name": "retire",
-            "type": "retire",
-            "ricardian_contract": ""
-        },
-        {
             "name": "transfer",
             "type": "transfer",
             "ricardian_contract": ""
@@ -240,7 +250,7 @@
             "key_types": []
         },
         {
-            "name": "blacklists",
+            "name": "blacklist",
             "type": "blacklist_table",
             "index_type": "i64",
             "key_names": [],

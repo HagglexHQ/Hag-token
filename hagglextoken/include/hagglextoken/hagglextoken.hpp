@@ -4,6 +4,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/system.hpp>
 
+
 #include <string>
 
 namespace eosiosystem {
@@ -26,7 +27,7 @@ using namespace eosio;
          void issue( const name& to, const asset& quantity, const string& memo );
 
           [[eosio::action]] 
-         void retire( const asset& quantity, const string& memo );
+         void burn( const asset& quantity, const string& memo );
 
    
           [[eosio::action]] 
@@ -45,12 +46,18 @@ using namespace eosio;
 
          [[eosio::action]]
          void mint(const symbol_code& sym);
+         
 
          [[eosio::action]]
-         void blacklist( name account, string memo );
+         void blacklist( const name& account, const string& memo );
+
 
          [[eosio::action]]
-         void unblacklist( name account );
+         void unblacklist( const name& account );
+
+
+         [[eosio::action]]
+         void clrblacklist();
 
 
          static asset get_supply( const name& token_contract_account, const symbol_code& sym_code )
@@ -70,28 +77,31 @@ using namespace eosio;
 
 
 
-
          asset get_reward( asset currentsupply, symbol_code sym ){
 
             asset reward;
 
-            if (currentsupply.amount/10000 <= 4672000){ //halvening 0
-               reward =  asset(3200, symbol(sym, 4));
+            if (currentsupply.amount/10000 <= 233600 ){ //halvening 0
+               reward =  asset(160, symbol(sym, 4));
             }
-            else if (currentsupply.amount/10000 <= 2336000) {//halvening 1
-               reward =  asset(1600, symbol(sym, 4));
+            else if (currentsupply.amount/10000 <= 116800) {//halvening 1
+               reward =  asset(80, symbol(sym, 4));
             }
-            else if (currentsupply.amount/10000 <= 1168000) {//halvening 2
+            else if (currentsupply.amount/10000 <= 58400) {//halvening 2
                
-               reward =  asset(800, symbol(sym, 4));
+               reward =  asset(40, symbol(sym, 4));
             }
-            else if (currentsupply.amount/10000 <= 584000) { //halvening 3
+            else if (currentsupply.amount/10000 <= 29200) { //halvening 3
                
-               reward =  asset(400, symbol(sym, 4));
+               reward =  asset(20, symbol(sym, 4));
             }
-            else if (currentsupply.amount/10000 < 240000) { //halvening 4
+            else if (currentsupply.amount/10000 <= 14600) { //halvening 4
                
-               reward =  asset(200, symbol(sym, 4));
+               reward =  asset(10, symbol(sym, 4));
+            }
+            else if (currentsupply.amount/10000 <= 7300) { //halvening 5
+               
+               reward =  asset(5, symbol(sym, 4));
             }
             else {
 
@@ -104,7 +114,7 @@ using namespace eosio;
 
          using create_action = eosio::action_wrapper<"create"_n, &hagglextoken::create>;
          using issue_action = eosio::action_wrapper<"issue"_n, &hagglextoken::issue>;
-         using retire_action = eosio::action_wrapper<"retire"_n, &hagglextoken::retire>;
+         using burn_action = eosio::action_wrapper<"burn"_n, &hagglextoken::burn>;
          using transfer_action = eosio::action_wrapper<"transfer"_n, &hagglextoken::transfer>;
          using open_action = eosio::action_wrapper<"open"_n, &hagglextoken::open>;
          using close_action = eosio::action_wrapper<"close"_n, &hagglextoken::close>;
@@ -124,6 +134,7 @@ using namespace eosio;
             uint32_t       starttime;
             uint32_t       minetime;
 
+
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
@@ -133,10 +144,12 @@ using namespace eosio;
             auto primary_key() const {  return account.value;  }
          };
 
+        
 
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
-         typedef eosio::multi_index< "blacklists"_n, blacklist_table > blacklists;
+         typedef eosio::multi_index< "blacklist"_n, blacklist_table > blacklist_t;
+
 
 
          void sub_balance( const name& owner, const asset& value );
