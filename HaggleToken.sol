@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity 0.6.12;
 
 /*
  * @dev Provides information about the current execution context, including the
@@ -272,11 +272,11 @@ contract Owned is Context {
         _;
     }
 
-    function transferOwnership(address newOwner) public onlyOwner {
+    function transferOwnership(address newOwner) external onlyOwner {
         _newOwner = newOwner;
     }
 
-    function acceptOwnership() public {
+    function acceptOwnership() external {
         require(_msgSender() == _newOwner, "HaggleX Token: Token Contract Ownership has not been set for the address");
         emit OwnershipTransferred(_owner, _newOwner);
         _owner = _newOwner;
@@ -357,7 +357,7 @@ contract ERC20 is Context, IERC20 {
     /**
      * @dev Returns the name of the token.
      */
-    function name() public view returns (string memory) {
+    function name() external view returns (string memory) {
         return _name;
     }
 
@@ -367,7 +367,7 @@ contract ERC20 is Context, IERC20 {
      * @dev Returns the symbol of the token, usually a shorter version of the
      * name.
      */
-    function symbol() public view returns (string memory) {
+    function symbol() external view returns (string memory) {
         return _symbol;
     }
 
@@ -384,7 +384,7 @@ contract ERC20 is Context, IERC20 {
      * no way affects any of the arithmetic of the contract, including
      * {IERC20-balanceOf} and {IERC20-transfer}.
      */
-    function decimals() public view returns (uint8) {
+    function decimals() external view returns (uint8) {
         return _decimals;
     }
 
@@ -405,14 +405,14 @@ contract ERC20 is Context, IERC20 {
     /**
      * @dev Returns the paused state of transfers.
      */
-    function paused() public view returns (bool) {
+    function paused() external view returns (bool) {
         return _paused;
     }
 
     /**
      * @dev Returns the frozen state of transfers.
      */
-    function blacklisted(address _address) public view returns (bool) {
+    function blacklisted(address _address) external view returns (bool) {
         return _blacklists[_address];
     }
 
@@ -426,7 +426,7 @@ contract ERC20 is Context, IERC20 {
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
+    function transfer(address recipient, uint256 amount) external virtual override returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
@@ -445,7 +445,7 @@ contract ERC20 is Context, IERC20 {
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+    function approve(address spender, uint256 amount) external virtual override returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
@@ -463,7 +463,7 @@ contract ERC20 is Context, IERC20 {
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) external virtual override returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "HaggleX Token: transfer amount exceeds allowance"));
         return true;
@@ -481,7 +481,7 @@ contract ERC20 is Context, IERC20 {
      *
      * - `spender` cannot be the zero address.
      */
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) external virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
@@ -500,7 +500,7 @@ contract ERC20 is Context, IERC20 {
      * - `spender` must have allowance for the caller of at least
      * `subtractedValue`.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) external virtual returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "HaggleX Token: decreased allowance below zero"));
         return true;
     }
@@ -755,7 +755,7 @@ contract HaggleXToken is ERC20, Owned {
         _stakingOptions[2].totalStaked = 0;
 
         
-        _owner = tx.origin;
+        _owner = _msgSender();
         
         _mint(CORE_TEAM, 100000 ether);
         _mint(ADVISORS, 40000 ether);
@@ -777,7 +777,7 @@ contract HaggleXToken is ERC20, Owned {
     /* Get available tokens
      *
      */
-    function getMyBalance() public view returns(uint) {
+    function getMyBalance() external view returns(uint) {
         return balanceOf(_msgSender());
     }
 
@@ -785,7 +785,7 @@ contract HaggleXToken is ERC20, Owned {
     /* Get all tokens including staked
      *
      */
-    function getMyFullBalance() public view returns(uint) {
+    function getMyFullBalance() external view returns(uint) {
         uint balance = balanceOf(_msgSender());
         for (uint i = 0; i < _staking[_msgSender()].length; i++){
             balance += getStakeAmount(i);
@@ -797,7 +797,7 @@ contract HaggleXToken is ERC20, Owned {
 
       /* Get all stakes a address holds
      */
-    function getStakes() public view returns (uint[3][] memory) {
+    function getStakes() external view returns (uint[3][] memory) {
         uint[3][] memory tempStakeList = new uint[3][](_staking[_msgSender()].length);
         for (uint i = 0; i < _staking[_msgSender()].length; i++){
             tempStakeList[i][0] = getStakeAmount(i);
@@ -813,35 +813,35 @@ contract HaggleXToken is ERC20, Owned {
     /* Sets the address allowed to mint
      *
      */
-    function setMinter(address minter_) public onlyOwner {
+    function setMinter(address minter_) external onlyOwner {
         _minter = minter_;
     }
 
     /* Puts a hold on token movement in the contract
     *
     */
-    function pause() public onlyOwner  {
+    function pause() external onlyOwner  {
         _pause();
     }
     
     /* Release the hold on token movement in the contract
     *
     */
-    function unpause() public onlyOwner {
+    function unpause() external onlyOwner {
         _unpause();
     }
 
       /* Blacklist address from making transfer of tokens.
      *
      */
-    function blacklist(address _address) public onlyOwner {
+    function blacklist(address _address) external onlyOwner {
         _blacklist(_address);
     }    
 
     /* Whitelist address to make transfer of tokens.
      *
      */
-    function whitelist(address _address) public onlyOwner {
+    function whitelist(address _address) external onlyOwner {
         _whitelist(_address);
     } 
 
@@ -850,7 +850,7 @@ contract HaggleXToken is ERC20, Owned {
      *
      * See {ERC20-_burn}.
      */
-    function burn(uint256 amount) public {
+    function burn(uint256 amount) external {
         _burn(_msgSender(), amount);
     }
     
@@ -861,7 +861,7 @@ contract HaggleXToken is ERC20, Owned {
     * - account The account whose tokens will be burnt.
     * - amount The amount that will be burnt.
         */
-    function burnFrom(address account, uint256 amount) public {
+    function burnFrom(address account, uint256 amount) external {
          uint256 decreasedAllowance = allowance(account, _msgSender()).sub(amount, "HaggleX Token: burn amount exceeds allowance");
 
         _approve(account, _msgSender(), decreasedAllowance);
@@ -872,7 +872,7 @@ contract HaggleXToken is ERC20, Owned {
     /* Mint an amount of tokens to an address
      *
      */
-    function mint(address address_, uint256 amount_) public {
+    function mint(address address_, uint256 amount_) external {
         require(_msgSender() == _minter || _msgSender() == _owner, "HaggleX Token: Only minter and owner can mint tokens!");
         _mint(address_, amount_);
     }
@@ -880,7 +880,7 @@ contract HaggleXToken is ERC20, Owned {
     /*Mint to multiple addresses in an array.
      *
      */
-    function mintToMultipleAddresses(address[] memory _addresses, uint _amount) public onlyOwner {
+    function mintToMultipleAddresses(address[] memory _addresses, uint _amount) external onlyOwner {
         for(uint i = 0; i < _addresses.length; i++){
             _mint(_addresses[i],  _amount);
         }
@@ -911,13 +911,13 @@ contract HaggleXToken is ERC20, Owned {
     
     /* Returns the last Withdrawal time.
      */
-    function getLastWithdrawalTime(uint stake_) public view returns (uint) {
+    function getLastWithdrawalTime(uint stake_) external view returns (uint) {
        return _staking[_msgSender()][stake_].lastWithdrawTime;
     }
     
     /* Gets the number of withdrawals made already.
      */
-    function getNoOfWithdrawals(uint stake_) public view returns (uint) {
+    function getNoOfWithdrawals(uint stake_) external view returns (uint) {
         return _staking[_msgSender()][stake_].noOfWithdrawals;
     }
     
@@ -1027,7 +1027,7 @@ contract HaggleXToken is ERC20, Owned {
     /* Withdraw the staked reward delegated
     *
      */
-    function withdrawStakeReward(uint stake_) public {
+    function withdrawStakeReward(uint stake_) external {
         require(isStakeLocked(stake_) == true, "Withdrawal no longer available, you can only Unstake now!");
         require(block.timestamp >= _staking[_msgSender()][stake_].lastWithdrawTime + 10 minutes, "Not yet time to withdraw reward");
         _staking[_msgSender()][stake_].noOfWithdrawals++;
@@ -1036,7 +1036,7 @@ contract HaggleXToken is ERC20, Owned {
         _mint(_msgSender(), _amount);    
     }
     
-    function withdrawLeadershipBoardReward() public onlyOwner {
+    function withdrawLeadershipBoardReward() external onlyOwner {
         uint lastWithdrawTime = 1614556800;
         require(block.timestamp >= lastWithdrawTime + 10 minutes, "Not yet time to withdraw Leadership Board reward");
         lastWithdrawTime = block.timestamp;
@@ -1044,7 +1044,7 @@ contract HaggleXToken is ERC20, Owned {
         _mint(LEADERSHIP_BOARD, _amount);    
     }
     
-    function withdrawUBIReward() public onlyOwner {
+    function withdrawUBIReward() external onlyOwner {
         uint lastWithdrawTime = 1614556800;
         require(block.timestamp >= lastWithdrawTime + 10 minutes, "Not yet time to withdraw Leadership Board reward");
         lastWithdrawTime = block.timestamp;
@@ -1052,7 +1052,7 @@ contract HaggleXToken is ERC20, Owned {
         _mint(UNIVERSAL_BASIC_INCOME, _amount);    
     }
     
-    function withdrawDevelopmentReward() public onlyOwner {
+    function withdrawDevelopmentReward() external onlyOwner {
         uint lastWithdrawTime = 1614556800;
         require(block.timestamp >= lastWithdrawTime + 10 minutes, "Not yet time to withdraw Leadership Board reward");
         lastWithdrawTime = block.timestamp;
@@ -1064,7 +1064,7 @@ contract HaggleXToken is ERC20, Owned {
      /* Stake
      *
      */
-    function stake(uint amount_, uint stakeType_) public {
+    function stake(uint amount_, uint stakeType_) external {
         _burn(_msgSender(), amount_);
         stakedSupply += amount_;
         Stake memory temp;
@@ -1084,7 +1084,7 @@ contract HaggleXToken is ERC20, Owned {
      * sends mint function call to reward contract to mint the
      * reward to the sender address.
      */
-    function unstake(uint stake_) public {
+    function unstake(uint stake_) external {
         require(isStakeLocked(stake_) != true, "HaggleX Token:Stake still locked!");
         uint _amount = _staking[_msgSender()][stake_].amount;
         _mint(_msgSender(), _amount);
