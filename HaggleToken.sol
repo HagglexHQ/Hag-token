@@ -273,6 +273,7 @@ contract Owned is Context {
     }
 
     function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "HaggleX Token: approve to the zero address");
         _newOwner = newOwner;
     }
 
@@ -687,30 +688,32 @@ contract HaggleXToken is ERC20, Owned {
     uint private stakedSupply = 0;
 
     
-    uint8 private STAKERS_PERCENTAGE = 60;
-    uint8 private LEADERSHIP_BOARD_PERCENTAGE = 20;
-    uint8 private UNIVERSAL_BASIC_INCOME_PERCENTAGE = 5;
-    uint8 private DEVELOPMENT_PERCENTAGE = 15;
+    uint8 constant STAKERS_PERCENTAGE = 60;
+    uint8 constant LEADERSHIP_BOARD_PERCENTAGE = 20;
+    uint8 constant UNIVERSAL_BASIC_INCOME_PERCENTAGE = 5;
+    uint8 constant DEVELOPMENT_PERCENTAGE = 15;
 
     
-    address private CORE_TEAM = 0x821e90F8a572B62604877A2d5aa740Da0abDa07F;
-    address private ADVISORS = 0x7610269058d82eC1F2E66a0ff981056622D387F6;
-    address private CORE_INVESTORS = 0x811a622EB3e2a1a0Af8aE1a9AAaE8D1DC6016534;
-    address private RESERVE = 0x609B1D6C5E6E2B48bfCe70eD7f88bAA3ECB9ca9d;
-    address private CHARITY = 0x76a6a41282434a784e88Afc91Bd3E552A6F560f1;
-    address private FOUNDING_STAFF = 0xAbE2526c2F8117B081817273d56fa09c4bcBDc49;
-    address private AIRGRAB = 0xF985905b1510d51fd3da563D530263481F7c2a18;
+    address public CORE_TEAM;
+    address public ADVISORS;
+    address public CORE_INVESTORS;
+    address public RESERVE;
+    address public CHARITY;
+    address public FOUNDING_STAFF;
+    address public AIRGRAB;
+    address public ICO;
     
-    address private LEADERSHIP_BOARD = 0x7B9A1CF604396160F543f0FFaE50E076e15f39c8;
-    address private UNIVERSAL_BASIC_INCOME = 0x9E7481AeD2585eC09066B8923570C49A38E06eAF;
-    address private DEVELOPMENT = 0xaC92741D5BcDA49Ce0FF35a3D5be710bA870B260;
+    address public LEADERSHIP_BOARD;
+    address public UNIVERSAL_BASIC_INCOME;
+    address public DEVELOPMENT;
+    
     
     
 
     struct StakeType {
         uint rewardPercent; // Percent reward to get each period
         uint lockedTime; // How long the stake is locked before allowed to withdraw
-        uint totalStaked; //Total amount staked for 
+        uint totalStaked; //Total amount staked for a particular StakeType
     }
     
     mapping(uint => StakeType) private _stakingOptions;
@@ -721,23 +724,22 @@ contract HaggleXToken is ERC20, Owned {
         uint stakeType; // Type of stake
         uint lastWithdrawTime; // Track the last lastWithdrawTime time
         uint noOfWithdrawals; // Number of Withdrawals made
+        bool stakeActive; //Tracks whether a stake is still active
     }
-    mapping(address => Stake[]) private _staking;
     
-    constructor () public  ERC20("HaggleX Token", "HAG", 18){
+    //Each stake owned by an address
+    mapping(address => mapping(uint => Stake)) private _staking;
+    
+    //Number of stakes owned by an address
+    mapping(address => uint) private _stakesCount;
+
+    //deployment time
+    uint private deploymentTime;
+
+    
+    constructor () public  ERC20("HaggleX Token", "HAG", 8){
                 
-       
-        //Test Staking
-        _stakingOptions[9].rewardPercent = 100;
-        _stakingOptions[9].lockedTime = 20 minutes;
-        _stakingOptions[9].totalStaked = 0;
-
-        
-        _stakingOptions[8].rewardPercent = 50;
-        _stakingOptions[8].lockedTime = 30 minutes;
-        _stakingOptions[8].totalStaked = 0;
-
-
+        //STAKING PLANS
         //staking for 3months 
         _stakingOptions[0].rewardPercent = 15;
         _stakingOptions[0].lockedTime = 12 weeks;
@@ -754,18 +756,99 @@ contract HaggleXToken is ERC20, Owned {
         _stakingOptions[2].lockedTime = 48 weeks;
         _stakingOptions[2].totalStaked = 0;
 
-        
+    
+        //OWNER
         _owner = _msgSender();
         
-        _mint(CORE_TEAM, 100000 ether);
-        _mint(ADVISORS, 40000 ether);
-        _mint(CORE_INVESTORS, 60000 ether);
-        _mint(RESERVE, 100000 ether);
-        _mint(CHARITY, 20000 ether);
-        _mint(FOUNDING_STAFF, 80000 ether);
-        _mint(AIRGRAB, 100000 ether);
+        //Time Contract was deployed
+        deploymentTime = block.timestamp;
+        
+        
+       
+        
+        setAddresses(0xdA3D2fdd872327E5705ad6de147DaBeDdf2FA0C0,
+                    0x221Cb04Ff55Eee92111DAC6003b7C54C2A0F8904,
+                    0xA05bc45454e487367e5509073d9B194611f4CF96,
+                    0xD2EcB7331012646CDE72c02142d4Cdf2Ad5083bd,
+                    0x40B016E3e79aFf31619b9d69b2b71376e5Ce7350,
+                    0xb87990338482286E00dF045188a74f90aB8c8B53,
+                    0x4432dC2390CBDA319b7F0C2d9600c6C478D29261,
+                    0x08c6DDDE074fe8c60730c5c079815728Bfbb1041);
+        
+        set_LB_UBI_DEV_Address(0x2b09F7e6Bc0336BF5160c631c7ed73F34373Edc7,
+                            0x6FD3b168478cdebA8b8C2AB12776C6B83e992007,
+                            0x0cEdEAd442a381AD321ea944e30B09d340638B56);
+        
+        
+        _mint(CORE_TEAM, 10000 gwei);
+        _mint(ADVISORS, 4000 gwei);
+        _mint(CORE_INVESTORS, 6000 gwei);
+        _mint(RESERVE, 10000 gwei);
+        _mint(CHARITY, 2000 gwei);
+        _mint(FOUNDING_STAFF, 8000 gwei);
+        _mint(AIRGRAB, 10000 gwei);
+        _mint(ICO, 50000 gwei);
+
+
+        _blacklist(CORE_TEAM);
+        _blacklist(ADVISORS);
+        _blacklist(CORE_INVESTORS);
+        _blacklist(RESERVE);
+        _blacklist(CHARITY);
+        _blacklist(FOUNDING_STAFF);
+        _blacklist(AIRGRAB);
 
     }
+    
+    /* Sets the addresses that holds the of different groups in the team
+     *
+     */
+    function setAddresses(address _CORE_TEAM, 
+                            address _ADVISORS, 
+                            address _CORE_INVESTORS, 
+                            address _RESERVE, 
+                            address _CHARITY, 
+                            address _FOUNDING_STAFF, 
+                            address _AIRGRAB, 
+                            address _ICO)
+        public onlyOwner{
+        require(_CORE_TEAM != address(0), "HaggleX Token: approve to the zero address");
+        require(_ADVISORS != address(0), "HaggleX Token: approve to the zero address");
+        require(_CORE_INVESTORS != address(0), "HaggleX Token: approve to the zero address");
+        require(_RESERVE != address(0), "HaggleX Token: approve to the zero address");
+        require(_CHARITY != address(0), "HaggleX Token: approve to the zero address");
+        require(_FOUNDING_STAFF != address(0), "HaggleX Token: approve to the zero address");
+        require(_AIRGRAB != address(0), "HaggleX Token: approve to the zero address");
+        require(_ICO != address(0), "HaggleX Token: approve to the zero address");
+
+        CORE_TEAM = _CORE_TEAM;
+        ADVISORS = _ADVISORS;
+        CORE_INVESTORS = _CORE_INVESTORS;
+        RESERVE = _RESERVE;
+        CHARITY = _CHARITY;
+        FOUNDING_STAFF = _FOUNDING_STAFF;
+        AIRGRAB = _AIRGRAB;
+        ICO = _ICO;
+
+    }
+    
+   
+    
+    /* Sets the addresses that holds the daily token rewards
+         *
+         */
+         
+    function set_LB_UBI_DEV_Address(address LB, address UBI, address DEV) public onlyOwner {
+        require(LB != address(0), "HaggleX Token: approve to the zero address");
+        require(UBI != address(0), "HaggleX Token: approve to the zero address");
+        require(DEV != address(0), "HaggleX Token: approve to the zero address");
+        
+        LEADERSHIP_BOARD = LB;
+        UNIVERSAL_BASIC_INCOME = UBI;
+        DEVELOPMENT = DEV;
+    }
+    
+    
     
     /* Set the token contract for which to call for the stake reward
      *
@@ -787,7 +870,7 @@ contract HaggleXToken is ERC20, Owned {
      */
     function getMyFullBalance() external view returns(uint) {
         uint balance = balanceOf(_msgSender());
-        for (uint i = 0; i < _staking[_msgSender()].length; i++){
+        for (uint i = 1; i < _stakesCount[_msgSender()]; i++){
             balance += getStakeAmount(i);
         } 
         return balance;
@@ -798,8 +881,8 @@ contract HaggleXToken is ERC20, Owned {
       /* Get all stakes a address holds
      */
     function getStakes() external view returns (uint[3][] memory) {
-        uint[3][] memory tempStakeList = new uint[3][](_staking[_msgSender()].length);
-        for (uint i = 0; i < _staking[_msgSender()].length; i++){
+        uint[3][] memory tempStakeList = new uint[3][](_stakesCount[_msgSender()]+1);
+        for (uint i = 1; i <= _stakesCount[_msgSender()]; i++){
             tempStakeList[i][0] = getStakeAmount(i);
             tempStakeList[i][1] = getRemainingLockTime(i);
             tempStakeList[i][2] = calculateDailyStakeReward(i);
@@ -807,13 +890,13 @@ contract HaggleXToken is ERC20, Owned {
         return tempStakeList;
     }
     
-    
 
     
     /* Sets the address allowed to mint
      *
      */
     function setMinter(address minter_) external onlyOwner {
+        require(minter_ != address(0), "HaggleX Token: approve to the zero address");
         _minter = minter_;
     }
 
@@ -880,22 +963,26 @@ contract HaggleXToken is ERC20, Owned {
     /*Mint to multiple addresses in an array.
      *
      */
-    function mintToMultipleAddresses(address[] memory _addresses, uint _amount) external onlyOwner {
-        for(uint i = 0; i < _addresses.length; i++){
-            _mint(_addresses[i],  _amount);
+    function mintToMultipleAddresses(address[] memory _addresses, uint[] memory _amount) external onlyOwner {
+        uint addressSize = _addresses.length;
+        uint amountSize = _amount.length;
+        require(addressSize == amountSize, "HaggleX Token: Inconsistency in array sizes");
+        for(uint i = 0; i < addressSize; i++){
+            _mint(_addresses[i],  _amount[i]);
         }
     }
     
     
   
    
-    /* returns true or false depending on if a stake is locked
+     /* returns true or false depending on if a stake is locked
      * or free to withdraw.
      */
     function isStakeLocked(uint stake_) private view returns (bool) {
         uint stakingTime = block.timestamp - _staking[_msgSender()][stake_].startTime;
         return stakingTime < _stakingOptions[_staking[_msgSender()][stake_].stakeType].lockedTime;
     }
+    
     
     /* Returns the remaining lock time of a stake, if unlocked
      * returns 0.
@@ -909,7 +996,7 @@ contract HaggleXToken is ERC20, Owned {
         }
     }
     
-    /* Returns the last Withdrawal time.
+   /* Returns the last Withdrawal time.
      */
     function getLastWithdrawalTime(uint stake_) external view returns (uint) {
        return _staking[_msgSender()][stake_].lastWithdrawTime;
@@ -971,40 +1058,40 @@ contract HaggleXToken is ERC20, Owned {
             
             uint reward;
 
-            if (getTotalSupply() >= 1000000 ether && getTotalSupply() <= 1116800 ether) {//halvening 1
-               reward =  80 ether;
+            if (getTotalSupply() >= 100000 gwei && getTotalSupply() <= 111680 gwei) {//halvening 1
+               reward =  8 gwei;
             }
-            else if (getTotalSupply() > 1116800 ether && getTotalSupply() <= 1175200 ether) {//halvening 2
+            else if (getTotalSupply() > 111680 gwei && getTotalSupply() <= 117520 gwei) {//halvening 2
                
-               reward =  40 ether;
+               reward =  4 gwei;
             }
-            else if (getTotalSupply() > 1175200 ether && getTotalSupply() <= 1204400 ether) { //halvening 3
+            else if (getTotalSupply() > 117520 gwei && getTotalSupply() <= 120440 gwei) { //halvening 3
                
-               reward =  20 ether;
+               reward =  2 gwei;
             }
-            else if (getTotalSupply() > 1204400 ether && getTotalSupply() <= 1219000 ether) { //halvening 4
+            else if (getTotalSupply() > 120440 gwei && getTotalSupply() <= 121900 gwei) { //halvening 4
                
-               reward =  10 ether;
+               reward =  1 gwei;
             }
-            else if (getTotalSupply() > 1219000 ether && getTotalSupply() <= 1226300 ether) { //halvening 5
+            else if (getTotalSupply() > 121900 gwei && getTotalSupply() <= 122630 gwei) { //halvening 5
                
-               reward =  5 ether;
+               reward =  0.5 gwei;
             }
-            else if (getTotalSupply() > 1226300 ether && getTotalSupply() <= 1229950 ether) { //halvening 6
+            else if (getTotalSupply() > 122630 gwei && getTotalSupply() <= 122995 gwei) { //halvening 6
                
-               reward =  2.5 ether;
+               reward =  0.25 gwei;
             }
-            else if (getTotalSupply() > 1229950 ether && getTotalSupply() <= 1231775 ether) { //halvening 7
+            else if (getTotalSupply() > 122995 gwei && getTotalSupply() <= 123177.5 gwei) { //halvening 7
                
-               reward =  1.25 ether;
+               reward =  0.125 gwei;
             }
-            else if (getTotalSupply() > 1231775 ether) { //halvening 8
+            else if (getTotalSupply() > 123177.5 gwei) { //halvening 8
                
-               reward =  0.625 ether;
+               reward =  0.0625 gwei;
             }
             else {
 
-               reward =  0 ether;
+               reward =  0 gwei;
             }
             
             return reward;
@@ -1013,8 +1100,7 @@ contract HaggleXToken is ERC20, Owned {
     
     
     
-    
-     /* Calculates the Daily Reward of the of a particular stake
+    /* Calculates the Daily Reward of the of a particular stake
     *
      */
     function calculateDailyStakeReward(uint stake_) public view returns (uint) {
@@ -1028,54 +1114,44 @@ contract HaggleXToken is ERC20, Owned {
     *
      */
     function withdrawStakeReward(uint stake_) external {
-        require(isStakeLocked(stake_) == true, "Withdrawal no longer available, you can only Unstake now!");
-        require(block.timestamp >= _staking[_msgSender()][stake_].lastWithdrawTime + 10 minutes, "Not yet time to withdraw reward");
+        require(isStakeLocked(stake_), "HaggleX Token: Withdrawal no longer available, you can only Unstake now!");
+        require(block.timestamp >= _staking[_msgSender()][stake_].lastWithdrawTime + 24 hours, "Hagglex Token: Not yet time to withdraw reward");
         _staking[_msgSender()][stake_].noOfWithdrawals++;
         _staking[_msgSender()][stake_].lastWithdrawTime = block.timestamp;
         uint _amount = calculateDailyStakeReward(stake_);
         _mint(_msgSender(), _amount);    
     }
     
-    function withdrawLeadershipBoardReward() external onlyOwner {
-        uint lastWithdrawTime = 1614556800;
-        require(block.timestamp >= lastWithdrawTime + 10 minutes, "Not yet time to withdraw Leadership Board reward");
-        lastWithdrawTime = block.timestamp;
-        uint _amount = getLeadershipBoardPercentageReward();
-        _mint(LEADERSHIP_BOARD, _amount);    
+    
+    //tracks the last time a withdrawal was made on the other rewards
+    uint private lastOtherRewardWithdrawalTime = deploymentTime + 8 weeks;
+    
+    function withdrawOtherRewards() external onlyOwner{
+        require(block.timestamp >= lastOtherRewardWithdrawalTime + 24 hours, "HaggleX Token: Not yet time to withdraw Leadership Board reward");
+        lastOtherRewardWithdrawalTime = block.timestamp;
+        _mint(DEVELOPMENT, getDevelopmentPercentageReward());
+        _mint(UNIVERSAL_BASIC_INCOME, getUBIPercentageReward()); 
+        _mint(LEADERSHIP_BOARD, getLeadershipBoardPercentageReward());   
     }
     
-    function withdrawUBIReward() external onlyOwner {
-        uint lastWithdrawTime = 1614556800;
-        require(block.timestamp >= lastWithdrawTime + 10 minutes, "Not yet time to withdraw Leadership Board reward");
-        lastWithdrawTime = block.timestamp;
-        uint _amount = getUBIPercentageReward();
-        _mint(UNIVERSAL_BASIC_INCOME, _amount);    
-    }
-    
-    function withdrawDevelopmentReward() external onlyOwner {
-        uint lastWithdrawTime = 1614556800;
-        require(block.timestamp >= lastWithdrawTime + 10 minutes, "Not yet time to withdraw Leadership Board reward");
-        lastWithdrawTime = block.timestamp;
-        uint _amount = getDevelopmentPercentageReward();
-        _mint(DEVELOPMENT, _amount);    
-    }
-
     
      /* Stake
      *
      */
-    function stake(uint amount_, uint stakeType_) external {
-        _burn(_msgSender(), amount_);
-        stakedSupply += amount_;
+    function stake(uint _amount, uint stakeType_) external {
+        _burn(_msgSender(), _amount);
+        stakedSupply += _amount;
         Stake memory temp;
-        temp.amount = amount_;
+        temp.amount = _amount;
         temp.startTime = block.timestamp;
         temp.stakeType = stakeType_;    
         temp.lastWithdrawTime = block.timestamp;
         temp.noOfWithdrawals = 0;
-        _staking[_msgSender()].push(temp);
-        _stakingOptions[stakeType_].totalStaked += amount_;
-        emit staked(_msgSender(), amount_, _stakingOptions[stakeType_].lockedTime);
+        temp.stakeActive = true;
+        _stakesCount[_msgSender()]++;
+        _staking[_msgSender()][_stakesCount[_msgSender()]] = temp;
+        _stakingOptions[stakeType_].totalStaked += _amount;
+        emit staked(_msgSender(), _amount, _stakingOptions[stakeType_].lockedTime);
     }
     
     
@@ -1085,26 +1161,13 @@ contract HaggleXToken is ERC20, Owned {
      * reward to the sender address.
      */
     function unstake(uint stake_) external {
-        require(isStakeLocked(stake_) != true, "HaggleX Token:Stake still locked!");
+        require(!isStakeLocked(stake_), "HaggleX Token:Stake still locked!");
         uint _amount = _staking[_msgSender()][stake_].amount;
         _mint(_msgSender(), _amount);
         stakedSupply -= _amount;
-        _stakingOptions[stake_].totalStaked -= _amount;
-        _removeIndexInArray(_staking[_msgSender()], stake_);
+        _stakingOptions[_staking[_msgSender()][stake_].stakeType].totalStaked -= _amount;
+        _staking[_msgSender()][stake_].stakeActive = false;        
         emit unstaked(_msgSender(), _amount);
-    }
-    
-    
-    
-    /* Walks through an array from index, moves all values down one
-     * step then pops the last value.
-     */
-    function _removeIndexInArray(Stake[] storage _array, uint _index) private {
-        if (_index >= _array.length) return;
-        for (uint i = _index; i<_array.length-1; i++){
-            _array[i] = _array[i+1];
-        }
-        _array.pop();
     }
     
 }
